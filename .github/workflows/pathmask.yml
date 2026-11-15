@@ -5,10 +5,18 @@ on:
     branches:
       - 17.0.0-cp3a
     paths:
-      - gscripts/build_pathmask.sh
-      - .github/workflows/build.yml
-      - .github/workflows/pathmask.yml
-      - docs/PATHMASK.md
+      - "gscripts/**"
+      - "fs/pathmask/**"
+      - "fs/Kconfig"
+      - "fs/Makefile"
+      - "fs/namei.c"
+      - "fs/stat.c"
+      - "fs/readdir.c"
+      - "include/linux/pathmask.h"
+      - "arch/arm64/configs/zuma_defconfig"
+      - ".github/workflows/build.yml"
+      - ".github/workflows/pathmask.yml"
+      - "docs/PATHMASK.md"
   workflow_dispatch:
 
 permissions:
