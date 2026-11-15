@@ -95,9 +95,8 @@ for start, stop in (
 ):
     text = scoped(
         text, start, stop,
-        "\tif (!f.file)\n\t\treturn -EBADF;\n\n\terror = iterate_dir",
-        "\tif (!f.file)\n\t\treturn -EBADF;\n\n"
+        "\terror = iterate_dir(f.file, &buf.ctx);",
         "\tbuf.pm_dev = file_inode(f.file)->i_sb->s_dev;\n"
-        "\terror = iterate_dir")
+        "\terror = iterate_dir(f.file, &buf.ctx);")
 readdir.write_text(text)
 print("PathMask: injected inode_permission, vfs_getattr and 3 getdents variants")
