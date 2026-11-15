@@ -64,6 +64,81 @@ jobs:
               out.parent.mkdir(parents=True, exist_ok=True)
               out.write_text(diff)
           PY
+      - name: Inspect final hooked source context
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY' | tee patch-audit/hook-check.txt
+          from pathlib import Path
+          checks = {
+            'KernelSU-Next/kernel/core/init.c': [
+              'susfs_init();', 'ksu_sucompat_init();',
+              'ksu_setuid_hook_init();', 'ksu_syscall_hook_init();',
+              'ksu_syscall_hook_manager_init();', 'ksu_ksud_init();',
+              'ksu_late_loaded', 'ksu_lsm_hook_init();',
+            ],
+            'KernelSU-Next/kernel/feature/kernel_umount.c': [
+              'ksu_uid_should_umount(new_uid)',
+              'is_zygote_child',
+              'ksu_handle_umount(uid_t old_uid, uid_t new_uid)',
+            ],
+            'KernelSU-Next/kernel/Kbuild': [
+              'hook/syscall_hook_manager.o', 'hook/lsm_hook.o',
+              'hook/setuid_hook.o', 'feature/kernel_umount.o',
+            ],
+            'KernelSU-Next/kernel/hook/setuid_hook.c': [
+              'ksu_handle_setresuid(', 'handle_zygote_setresuid(',
+              'ksu_handle_extra_susfs_work()', 'susfs_set_current_proc_no_su()',
+            ],
+            'fs/namespace.c': [
+              'susfs_is_current_ksu_domain', 'susfs_sus_mount',
+              '#include <linux/susfs_def.h>',
+            ],
+            'fs/super.c': [
+              'susfs_is_current_ksu_domain',
+              '#include <linux/susfs_def.h>',
+            ],
+            'kernel/sys.c': [
+              'susfs_spoof_uname(&tmp)',
+            ],
+            'fs/namei.c': [
+              'vpnhide_should_hide_dentry(', 'pathmask_should_hide_inode(',
+            ],
+            'fs/readdir.c': [
+              'vpnhide_readdir_begin(', 'vpnhide_readdir_end(',
+              'pathmask_should_hide_dirent(',
+            ],
+            'fs/stat.c': [
+              'vpnhide_should_hide', 'susfs_sus_kstat',
+              'pathmask_should_hide_inode(',
+            ],
+            'fs/nomount/Kconfig': [
+              'NOMOUNT',
+            ],
+          }
+          for file, patterns in checks.items():
+              p = Path(file)
+              src = p.read_text(errors='replace') if p.is_file() else ''
+              print(f'### {file}: present={p.is_file()}')
+              for pattern in patterns:
+                  found = [(i, line.strip()) for i, line in
+                           enumerate(src.splitlines(), 1) if pattern in line]
+                  print(f' {pattern}: count={len(found)}')
+                  for line, text in found[:5]:
+                      print(f'   L{line}: {text[:140]}')
+          init = Path('KernelSU-Next/kernel/core/init.c')
+          if init.is_file():
+              s = init.read_text(errors='replace').splitlines()
+              for label, start, stop in [
+                ('kernelsu_init', 'int __init kernelsu_init(', 'void __exit kernelsu_exit('),
+              ]:
+                  a = next((i for i,x in enumerate(s) if start in x), -1)
+                  b = next((i for i,x in enumerate(s) if stop in x), -1)
+                  if a >= 0 and b > a:
+                      print(f'### CONTEXT {label}')
+                      for i in range(a, min(b, a+170)):
+                          print(f' {i+1}: {s[i]}')
+          PY
       - uses: actions/upload-artifact@v4
         if: always()
         with:
