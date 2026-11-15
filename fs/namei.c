@@ -43,6 +43,7 @@
 
 #include "internal.h"
 #include "mount.h"
+#include <linux/pathmask.h>
 
 /* [Feb-1997 T. Schoebel-Theuer]
  * Fundamental changes in the pathname lookup mechanisms (namei)
@@ -503,6 +504,9 @@ int inode_permission(struct user_namespace *mnt_userns,
 		     struct inode *inode, int mask)
 {
 	int retval;
+
+	if (unlikely(pathmask_should_hide_inode(inode)))
+		return -ENOENT;
 
 	retval = sb_permission(inode->i_sb, inode, mask);
 	if (retval)

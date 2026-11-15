@@ -1,0 +1,9 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config PATHMASK
+	bool "PathMask built-in selective VFS masking"
+	depends on PROC_FS
+	default n
+	help
+	  VFS path masking by dev/inode and selected app UIDs.
+	  No dynamic modules or kprobes needed.
+	  Disabled until configured at /proc/pathmask_ctl by root.

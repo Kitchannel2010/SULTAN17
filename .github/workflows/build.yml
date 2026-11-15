@@ -89,36 +89,11 @@ jobs:
           compression-level: 0
 
 
-      # Sultan uses CONFIG_INTEGRATE_MODULES=y, which explicitly excludes
-      # CONFIG_MODULES=y in kernel/module/Kconfig. A loadable PathMask .ko
-      # cannot work on that kernel, even if an external build succeeds.
-      - name: Check PathMask LKM compatibility
-        if: ${{ inputs.branch == '17.0.0-cp3a' }}
-        id: pathmask_support
-        shell: bash
+      - name: Verify PathMask built-in (cp3a zuma)
+        if: ${{ inputs.branch == '17.0.0-cp3a' && inputs.target == 'zuma' }}
         run: |
-          if grep -qx 'CONFIG_MODULES=y' out/.config; then
-            echo "supported=true" >> "$GITHUB_OUTPUT"
-            echo "PathMask LKM supported by this kernel config" >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "supported=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=PathMask LKM unavailable::Sultan INTEGRATE_MODULES excludes dynamic MODULES; PathMask is NOT integrated and no PathMask ZIP will be produced."
-            echo "### PathMask skipped: Sultan integrated modules are incompatible with loadable .ko" >> "$GITHUB_STEP_SUMMARY"
-            echo "A builtin PathMask port or a separately validated loadable-module kernel configuration is required." >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-      - name: Build matching PathMask module (cp3a only)
-        if: ${{ inputs.branch == '17.0.0-cp3a' && steps.pathmask_support.outputs.supported == 'true' }}
-        run: bash ./gscripts/build_pathmask.sh "$TARGET" "$VARIANT"
-
-      - name: Upload PathMask module and KernelSU package (cp3a only)
-        if: ${{ inputs.branch == '17.0.0-cp3a' && steps.pathmask_support.outputs.supported == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: PathMask_${{ inputs.branch }}_${{ inputs.target }}_${{ inputs.variant }}
-          path: |
-            dist/PathMask_${{ inputs.target }}_${{ inputs.variant }}_android14-6.1.ko
-            dist/PathMask_${{ inputs.target }}_${{ inputs.variant }}_android14-6.1_procguard.ko
-            dist/PathMask_${{ inputs.target }}_${{ inputs.variant }}_android14-6.1_ksu.zip
-          if-no-files-found: error
-          compression-level: 0
+          grep -qx 'CONFIG_PATHMASK=y' out/.config
+          test -s out/arch/arm64/boot/Image.lz4
+          test -s dist/SULTAN17_zuma_${{ inputs.variant }}.zip
+          echo "PathMask built-in enabled: CONFIG_PATHMASK=y" >> "$GITHUB_STEP_SUMMARY"
+          echo "No external LKM or ProcGuard ZIP is expected." >> "$GITHUB_STEP_SUMMARY"
