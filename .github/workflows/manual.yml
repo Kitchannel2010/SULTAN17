@@ -100,7 +100,7 @@ jobs:
     uses: ./.github/workflows/build.yml
 
     with:
-      branch: ${{ matrix.branch }} 
+      branch: 17.0.0-cp3a 
       target: ${{ matrix.target }}
       variant: ${{ matrix.variant }}
 

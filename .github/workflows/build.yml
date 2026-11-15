@@ -76,6 +76,12 @@ jobs:
         run: |
           ./gscripts/build.sh "$TARGET"
 
+      # Build a matching loadable .ko, not a second built-in VFS hook.
+      - name: Build matching PathMask module (cp3a only)
+        if: ${{ inputs.branch == '17.0.0-cp3a' }}
+        run: |
+          bash ./gscripts/build_pathmask.sh "$TARGET" "$VARIANT"
+
       - name: Package AnyKernel
         run: |
           ./gscripts/package.sh "$TARGET" "$VARIANT"
@@ -85,5 +91,18 @@ jobs:
         with:
           name: Sultan_${{ inputs.branch }}_${{ inputs.target }}_${{ inputs.variant }}
           path: AnyKernel/*
+          if-no-files-found: error
+          compression-level: 0
+
+
+      - name: Upload PathMask module and KernelSU package (cp3a only)
+        if: ${{ inputs.branch == '17.0.0-cp3a' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: PathMask_${{ inputs.branch }}_${{ inputs.target }}_${{ inputs.variant }}
+          path: |
+            dist/PathMask_${{ inputs.target }}_${{ inputs.variant }}_android14-6.1.ko
+            dist/PathMask_${{ inputs.target }}_${{ inputs.variant }}_android14-6.1_procguard.ko
+            dist/PathMask_${{ inputs.target }}_${{ inputs.variant }}_android14-6.1_ksu.zip
           if-no-files-found: error
           compression-level: 0

@@ -1,0 +1,23 @@
+name: PathMask Integration Test (cp3a zuma)
+
+on:
+  push:
+    branches:
+      - 17.0.0-cp3a
+    paths:
+      - gscripts/build_pathmask.sh
+      - .github/workflows/build.yml
+      - .github/workflows/pathmask.yml
+      - docs/PATHMASK.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      branch: 17.0.0-cp3a
+      target: zuma
+      variant: ksu-next-susfs-vpnhide
