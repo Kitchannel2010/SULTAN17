@@ -21,7 +21,7 @@ def scoped(text: str, begin: str, end: str, before: str, after: str) -> str:
     a = text.find(begin)
     if a == -1:
         raise SystemExit(f"PathMask: missing section {begin}")
-    b = text.find(end, a + len(begin))
+    b = text.find(end, a + len(begin)) if end else len(text)
     if b == -1:
         raise SystemExit(f"PathMask: missing end section {end}")
     return text[:a] + one(text[a:b], before, after, begin) + text[b:]
@@ -91,7 +91,7 @@ for start, stop in (
 for start, stop in (
     ("SYSCALL_DEFINE3(getdents,", "struct getdents_callback64"),
     ("SYSCALL_DEFINE3(getdents64,", "#ifdef CONFIG_COMPAT"),
-    ("COMPAT_SYSCALL_DEFINE3(getdents,", "#endif"),
+    ("COMPAT_SYSCALL_DEFINE3(getdents,", ""),
 ):
     text = scoped(
         text, start, stop,
