@@ -295,6 +295,16 @@ patch_vpnhide() {
         apply_patch_optional \
                 "$KERNEL_REPO" \
                 "$KERNEL_REPO"/vpnhide/builtin/versions/android14-6.1/fs_readdir.c.patch
+
+        # The upstream include hunk can reject against Sultan readdir.c even
+        # when the function-call hunk succeeds. Ensure hooks are declared.
+        if grep -q 'vpnhide_readdir_begin' "$KERNEL_REPO/fs/readdir.c"; then
+                if ! grep -q '^#include <linux/vpnhide.h>$' "$KERNEL_REPO/fs/readdir.c"; then
+                        sed -i '/^#include <linux\/uaccess.h>$/a #include <linux/vpnhide.h>' "$KERNEL_REPO/fs/readdir.c"
+                fi
+                grep -q '^#include <linux/vpnhide.h>$' "$KERNEL_REPO/fs/readdir.c" || die "VPNHide readdir hooks lack header"
+                grep -q 'vpnhide_readdir_end' "$KERNEL_REPO/fs/readdir.c" || die "VPNHide readdir hooks incomplete"
+        fi
         apply_patch_optional \
                 "$KERNEL_REPO" \
                 "$KERNEL_REPO"/vpnhide/builtin/versions/android14-6.1/fs_stat.c.patch
