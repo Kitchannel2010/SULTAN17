@@ -18,8 +18,19 @@ readonly PATHMASK_COMMIT='4adf552ab653fcd6c4512fc8927d8f172fa9536b'
 readonly PATHMASK_KMI='android14-6.1'
 
 [[ -f "$OUT_DIR/.config" ]] || die "Kernel .config missing: build the kernel first"
-[[ -f "$OUT_DIR/Module.symvers" ]] || die "Kernel Module.symvers missing: a matching module cannot be built"
 grep -qx 'CONFIG_MODULES=y' "$OUT_DIR/.config" || die 'CONFIG_MODULES=y is required for PathMask .ko'
+
+# The default full-kernel target emits vmlinux.symvers but this Sultan
+# configuration does not generate Module.symvers until "make modules".
+# Generate the complete export/CRC table from the exact configured build.
+if [[ ! -s "$OUT_DIR/Module.symvers" ]]; then
+    msg "Generating matching Module.symvers via kernel modules target"
+    make -C "$KERNEL_REPO" O="$OUT_DIR" \
+        CROSS_COMPILE="${TOOLCHAIN_BIN}/aarch64-linux-" \
+        CC="${TOOLCHAIN_BIN}/aarch64-linux-gcc" \
+        -j"$(nproc)" modules
+fi
+[[ -s "$OUT_DIR/Module.symvers" ]] || die "Kernel Module.symvers missing after make modules"
 
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "$WORK_DIR"' EXIT
