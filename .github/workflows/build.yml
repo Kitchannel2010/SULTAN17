@@ -76,12 +76,6 @@ jobs:
         run: |
           ./gscripts/build.sh "$TARGET"
 
-      # Build a matching loadable .ko, not a second built-in VFS hook.
-      - name: Build matching PathMask module (cp3a only)
-        if: ${{ inputs.branch == '17.0.0-cp3a' }}
-        run: |
-          bash ./gscripts/build_pathmask.sh "$TARGET" "$VARIANT"
-
       - name: Package AnyKernel
         run: |
           ./gscripts/package.sh "$TARGET" "$VARIANT"
@@ -95,8 +89,30 @@ jobs:
           compression-level: 0
 
 
-      - name: Upload PathMask module and KernelSU package (cp3a only)
+      # Sultan uses CONFIG_INTEGRATE_MODULES=y, which explicitly excludes
+      # CONFIG_MODULES=y in kernel/module/Kconfig. A loadable PathMask .ko
+      # cannot work on that kernel, even if an external build succeeds.
+      - name: Check PathMask LKM compatibility
         if: ${{ inputs.branch == '17.0.0-cp3a' }}
+        id: pathmask_support
+        shell: bash
+        run: |
+          if grep -qx 'CONFIG_MODULES=y' out/.config; then
+            echo "supported=true" >> "$GITHUB_OUTPUT"
+            echo "PathMask LKM supported by this kernel config" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "supported=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=PathMask LKM unavailable::Sultan INTEGRATE_MODULES excludes dynamic MODULES; PathMask is NOT integrated and no PathMask ZIP will be produced."
+            echo "### PathMask skipped: Sultan integrated modules are incompatible with loadable .ko" >> "$GITHUB_STEP_SUMMARY"
+            echo "A builtin PathMask port or a separately validated loadable-module kernel configuration is required." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Build matching PathMask module (cp3a only)
+        if: ${{ inputs.branch == '17.0.0-cp3a' && steps.pathmask_support.outputs.supported == 'true' }}
+        run: bash ./gscripts/build_pathmask.sh "$TARGET" "$VARIANT"
+
+      - name: Upload PathMask module and KernelSU package (cp3a only)
+        if: ${{ inputs.branch == '17.0.0-cp3a' && steps.pathmask_support.outputs.supported == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: PathMask_${{ inputs.branch }}_${{ inputs.target }}_${{ inputs.variant }}
