@@ -82,14 +82,23 @@ jobs:
 
             NAME="$(basename "$AKDIR")"
 
-            (
-              cd "$AKDIR"
-              zip -r9 "../../dist/${NAME}.zip" . \
-                -x ".git/*" \
-                -x ".github/*" \
-                -x "*.zip" \
-                -x "README.md"
-            )
+            # New cp3a artifacts already contain a flashable AnyKernel ZIP.
+            # Do not re-zip them (the previous "*.zip" exclusion would create
+            # an empty release archive). Preserve legacy unpacked artifacts.
+            PREBUILT=("$AKDIR"/*.zip)
+            if [[ -f "${PREBUILT[0]}" ]]; then
+              [[ "${#PREBUILT[@]}" -eq 1 ]] || { echo "Ambiguous ZIP artifacts in $AKDIR" >&2; exit 1; }
+              cp "${PREBUILT[0]}" "dist/${NAME}.zip"
+            else
+              (
+                cd "$AKDIR"
+                zip -r9 "../../dist/${NAME}.zip" . \
+                  -x ".git/*" \
+                  -x ".github/*" \
+                  -x "*.zip" \
+                  -x "README.md"
+              )
+            fi
           done
 
           ls -lh dist
