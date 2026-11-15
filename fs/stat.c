@@ -24,7 +24,6 @@
 
 #include "internal.h"
 #include "mount.h"
-#include <linux/pathmask.h>
 
 /**
  * generic_fillattr - Fill in the basic attributes from the inode struct
@@ -155,9 +154,6 @@ int vfs_getattr(const struct path *path, struct kstat *stat,
 		u32 request_mask, unsigned int query_flags)
 {
 	int retval;
-
-	if (unlikely(pathmask_should_hide_inode(d_inode(path->dentry))))
-		return -ENOENT;
 
 	retval = security_inode_getattr(path);
 	if (retval)

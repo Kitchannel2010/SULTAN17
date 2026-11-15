@@ -399,6 +399,13 @@ case "$VARIANT" in
         ;;
 esac
 
+# Inject native PathMask VFS call sites AFTER all SUSFS/Sultan/VPNHide patches.
+# Pre-patching these files rejects critical SUSFS include hunks.
+if [[ "$TARGET" == "zuma" ]]; then
+        msg "Applying built-in PathMask VFS hooks after upstream patches"
+        python3 "$SCRIPT_DIR/apply_pathmask_builtin.py"
+fi
+
 ##Patch Defconfig##
 
 DEFCONFIG="$KERNEL_REPO/arch/arm64/configs/${TARGET}_defconfig"

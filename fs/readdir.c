@@ -21,7 +21,6 @@
 #include <linux/unistd.h>
 #include <linux/compat.h>
 #include <linux/uaccess.h>
-#include <linux/pathmask.h>
 
 #include <asm/unaligned.h>
 
@@ -214,7 +213,6 @@ struct linux_dirent {
 
 struct getdents_callback {
 	struct dir_context ctx;
-	dev_t pm_dev;
 	struct linux_dirent __user * current_dir;
 	int prev_reclen;
 	int count;
@@ -235,8 +233,6 @@ static bool filldir(struct dir_context *ctx, const char *name, int namlen,
 	buf->error = verify_dirent_name(name, namlen);
 	if (unlikely(buf->error))
 		return false;
-	if (unlikely(pathmask_should_hide_dirent(buf->pm_dev, ino)))
-		return true;
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
 		return false;
@@ -287,7 +283,6 @@ SYSCALL_DEFINE3(getdents, unsigned int, fd,
 	if (!f.file)
 		return -EBADF;
 
-	buf.pm_dev = file_inode(f.file)->i_sb->s_dev;
 	error = iterate_dir(f.file, &buf.ctx);
 	if (error >= 0)
 		error = buf.error;
@@ -306,7 +301,6 @@ SYSCALL_DEFINE3(getdents, unsigned int, fd,
 
 struct getdents_callback64 {
 	struct dir_context ctx;
-	dev_t pm_dev;
 	struct linux_dirent64 __user * current_dir;
 	int prev_reclen;
 	int count;
@@ -418,8 +412,6 @@ static bool filldir64(struct dir_context *ctx, const char *name, int namlen,
 		return false;
 	if (unlikely(should_block_name(name, namlen)))
 		return true;
-	if (unlikely(pathmask_should_hide_dirent(buf->pm_dev, ino)))
-		return true;
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
 		return false;
@@ -466,7 +458,6 @@ SYSCALL_DEFINE3(getdents64, unsigned int, fd,
 	if (!f.file)
 		return -EBADF;
 
-	buf.pm_dev = file_inode(f.file)->i_sb->s_dev;
 	error = iterate_dir(f.file, &buf.ctx);
 	if (error >= 0)
 		error = buf.error;
@@ -566,7 +557,6 @@ struct compat_linux_dirent {
 
 struct compat_getdents_callback {
 	struct dir_context ctx;
-	dev_t pm_dev;
 	struct compat_linux_dirent __user *current_dir;
 	int prev_reclen;
 	int count;
@@ -587,8 +577,6 @@ static bool compat_filldir(struct dir_context *ctx, const char *name, int namlen
 	buf->error = verify_dirent_name(name, namlen);
 	if (unlikely(buf->error))
 		return false;
-	if (unlikely(pathmask_should_hide_dirent(buf->pm_dev, ino)))
-		return true;
 	buf->error = -EINVAL;	/* only used if we fail.. */
 	if (reclen > buf->count)
 		return false;
@@ -638,7 +626,6 @@ COMPAT_SYSCALL_DEFINE3(getdents, unsigned int, fd,
 	if (!f.file)
 		return -EBADF;
 
-	buf.pm_dev = file_inode(f.file)->i_sb->s_dev;
 	error = iterate_dir(f.file, &buf.ctx);
 	if (error >= 0)
 		error = buf.error;

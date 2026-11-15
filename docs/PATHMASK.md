@@ -6,6 +6,9 @@ without external `.ko`, Kretprobes, or separate KernelSU module. Sultan has
 
 ## Kernel integration
 
+The build's `gscripts/patch_sultan.sh` applies third-party SUSFS/VPNHide patches **before** `gscripts/apply_pathmask_builtin.py` inserts the PathMask call sites. This preserves original upstream patch contexts and avoids missing SUSFS declarations.
+
+
 - `CONFIG_PATHMASK=y` in `arch/arm64/configs/zuma_defconfig`
 - Native VFS hooks: `inode_permission`, `vfs_getattr`,
   `getdents`, `getdents64`, and compat `getdents`
