@@ -53,7 +53,7 @@ jobs:
                       print('  PRESENT: ' + line.strip()[:150])
                   removed = [l[1:] for l in h.splitlines() if l.startswith('-') and not l.startswith('---')]
                   removed = [l for l in removed if len(l.strip()) >= 15 and not l.lstrip().startswith(('*','//'))]
-                  still = [l for l in removed if re.sub(r'\\s+', '', l) in source_lines]
+                  still = [l for l in removed if re.sub(r'\s+', '', l) in source_lines]
                   print(f' removed_code_lines={len(removed)} still_in_source={len(still)}')
                   for line in still[:17]:
                       print('  STILL_OLD: ' + line.strip()[:180])
