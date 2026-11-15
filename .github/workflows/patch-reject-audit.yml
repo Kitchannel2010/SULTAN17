@@ -1,0 +1,67 @@
+name: Audit Patch Rejects (cp3a zuma)
+
+on:
+  push:
+    branches:
+      - 17.0.0-cp3a
+    paths:
+      - .github/workflows/patch-reject-audit.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply production patches without compiling kernel
+        shell: bash
+        run: |
+          chmod +x gscripts/*.sh
+          bash gscripts/patch_sultan.sh zuma ksu-next-susfs-vpnhide
+      - name: Audit rejected hunks against final patched source
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p patch-audit
+          python3 - <<'PY' | tee patch-audit/report.txt
+          import pathlib, re
+          root = pathlib.Path('.')
+          rejects = sorted(p for p in root.rglob('*.rej') if
+                           '.git' not in p.parts and 'toolchains' not in p.parts)
+          print(f'Total .rej files: {len(rejects)}', flush=True)
+          for rej in rejects:
+              target = pathlib.Path(str(rej)[:-4])
+              diff = rej.read_text(errors='replace')
+              source = target.read_text(errors='replace') if target.exists() else ''
+              source_lines = {re.sub(r'\s+', '', l) for l in source.splitlines()}
+              hunks = re.split(r'(?=^@@ )', diff, flags=re.M)
+              hunks = [h for h in hunks if h.startswith('@@ ')]
+              print(f'\n### {rej} (target_exists={target.exists()}, hunks={len(hunks)})')
+              for hi, h in enumerate(hunks, 1):
+                  added = [l[1:] for l in h.splitlines() if l.startswith('+') and not l.startswith('+++')]
+                  added = [l for l in added if l.strip() and not l.lstrip().startswith(('*','//','#endif'))]
+                  present = [l for l in added if re.sub(r'\s+', '', l) in source_lines]
+                  missing = [l for l in added if re.sub(r'\s+', '', l) not in source_lines]
+                  print(f' hunk{hi} addition_lines={len(added)} present_exact_normalized={len(present)} missing={len(missing)}')
+                  for line in missing[:12]:
+                      print('  MISSING: ' + line.strip()[:150])
+                  for line in present[:5]:
+                      print('  PRESENT: ' + line.strip()[:150])
+              print('----- RAW REJECT START -----')
+              print(diff[:24000])
+              print('----- RAW REJECT END -----')
+              out = pathlib.Path('patch-audit/rejects') / rej
+              out.parent.mkdir(parents=True, exist_ok=True)
+              out.write_text(diff)
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cp3a-reject-diagnostics
+          path: patch-audit/
+          if-no-files-found: error
+          retention-days: 14
